@@ -1,0 +1,53 @@
+def print_classification_report(y_true, y_pred, model_name):
+    print(f"\n=== {model_name} Classification Report ===")
+    print(classification_report(y_true, y_pred))
+
+# --- Random Forest ---
+'''rf = RandomForestClassifier(random_state=42)
+rf.fit(X_train, y_train)
+rf_preds = rf.predict(X_val)
+test_pred_rf = rf.predict(X_test)'''
+best_rf = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=10,
+    min_samples_split=4,
+    min_samples_leaf=2,
+    max_features='sqrt',
+    bootstrap=True,
+    random_state=42
+)
+best_rf.fit(X_train, y_train)
+rf_preds = best_rf.predict(X_val)
+test_pred_rf = best_rf.predict(X_test)
+
+
+metrics_dict['Random Forest'] = {
+    'Accuracy': accuracy_score(y_val, rf_preds),
+    'Precision': precision_score(y_val, rf_preds),
+    'Recall': recall_score(y_val, rf_preds),
+    'F1': f1_score(y_val, rf_preds)
+}
+plot_confusion_matrix(y_val, rf_preds, "Random Forest")
+print_classification_report(y_val, rf_preds, "Random Forest")
+
+import shap
+
+# Use TreeExplainer for Random Forest
+explainer_rf = shap.TreeExplainer(best_rf)
+shap_values_rf = explainer_rf.shap_values(X_val)
+
+# If it's a list (binary classification), select the SHAP values for class 1
+if isinstance(shap_values_rf, list):
+    summary_rf = shap_values_rf[1]
+else:
+    summary_rf = shap_values_rf
+
+# Ensure shape alignment
+if summary_rf.shape[1] != X_val.shape[1]:
+    X_rf_plot = X_val.iloc[:, :summary_rf.shape[1]]
+else:
+    X_rf_plot = X_val
+
+# Plot SHAP summary
+print("📊 SHAP Summary Plot for Tuned Random Forest")
+shap.summary_plot(summary_rf, X_rf_plot, feature_names=X_rf_plot.columns)
